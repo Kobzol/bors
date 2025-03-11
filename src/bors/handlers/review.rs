@@ -859,4 +859,21 @@ approve = ["+approved"]
         })
         .await;
     }
+
+    #[sqlx::test]
+    async fn approve_with_sha(pool: sqlx::PgPool) {
+        run_test(pool, |mut tester| async {
+            tester.post_comment("@bors r+").await?;
+            tester.expect_comments(1).await;
+
+            let pr = tester.get_default_pr().await?;
+            assert_eq!(
+                pr.approved_sha,
+                Some(format!("pr-{}-sha", default_pr_number()))
+            );
+
+            Ok(tester)
+        })
+        .await;
+    }
 }
