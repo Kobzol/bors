@@ -80,6 +80,7 @@ pub(crate) async fn approve_pull_request(
     executor: impl PgExecutor<'_>,
     pr_id: i32,
     approver: &str,
+    approved_sha: &str,
     priority: Option<u32>,
     rollup: Option<RollupMode>,
 ) -> anyhow::Result<()> {
@@ -89,11 +90,13 @@ pub(crate) async fn approve_pull_request(
         r#"
 UPDATE pull_request
 SET approved_by = $1,
-    priority = COALESCE($2, priority),
-    rollup = COALESCE($3, rollup)
-WHERE id = $4
+    approved_sha = $2,
+    priority = COALESCE($3, priority),
+    rollup = COALESCE($4, rollup)
+WHERE id = $5
 "#,
         approver,
+        approved_sha,
         priority_i32,
         rollup.map(|r| r.to_string()),
         pr_id,

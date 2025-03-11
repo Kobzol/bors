@@ -37,6 +37,7 @@ pub(super) async fn command_approve(
         repo_state.repository(),
         pr.number,
         approver.as_str(),
+        pr.head.sha.to_string().as_str(),
         priority,
         rollup,
     )
