@@ -28,6 +28,7 @@ SELECT
     pr.repository as "repository: GithubRepoName",
     pr.number,
     pr.approved_by,
+    pr.approved_sha,
     pr.priority,
     pr.rollup as "rollup: _",
     pr.delegated,
@@ -107,7 +108,7 @@ pub(crate) async fn unapprove_pull_request(
     pr_id: i32,
 ) -> anyhow::Result<()> {
     sqlx::query!(
-        "UPDATE pull_request SET approved_by = NULL WHERE id = $1",
+        "UPDATE pull_request SET approved_by = NULL, approved_sha = NULL WHERE id = $1",
         pr_id
     )
     .execute(executor)
@@ -153,6 +154,7 @@ SELECT
     pr.repository as "repository: GithubRepoName",
     pr.number,
     pr.approved_by,
+    pr.approved_sha,
     pr.priority,
     pr.rollup as "rollup: _",
     pr.delegated,

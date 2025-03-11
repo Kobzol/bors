@@ -149,6 +149,7 @@ pub struct PullRequestModel {
     pub repository: GithubRepoName,
     pub number: PullRequestNumber,
     pub approved_by: Option<String>,
+    pub approved_sha: Option<String>,
     pub delegated: bool,
     pub priority: Option<i32>,
     pub rollup: Option<RollupMode>,
