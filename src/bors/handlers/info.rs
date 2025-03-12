@@ -97,6 +97,7 @@ mod tests {
             .await;
     }
 
+    #[tracing_test::traced_test]
     #[sqlx::test]
     async fn info_for_pr_with_priority(pool: sqlx::PgPool) {
         BorsBuilder::new(pool)

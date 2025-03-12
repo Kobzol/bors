@@ -112,6 +112,33 @@ impl sqlx::Decode<'_, sqlx::Postgres> for RollupMode {
     }
 }
 
+/// Represents the approval status of a pull request.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ApprovalStatus {
+    /// The user who approved the pull request.
+    pub approver: String,
+    /// The SHA of the commit that was approved.
+    pub sha: String,
+}
+
+impl sqlx::Type<sqlx::Postgres> for ApprovalStatus {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <(Option<String>, Option<String>) as sqlx::Type<sqlx::Postgres>>::type_info()
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ApprovalStatus {
+    fn decode(value: sqlx::postgres::PgValueRef<'r>) -> Result<Self, BoxDynError> {
+        let (approver, sha) =
+            <(Option<String>, Option<String>) as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+
+        match (approver, sha) {
+            (Some(approver), Some(sha)) => Ok(ApprovalStatus { approver, sha }),
+            _ => Err("Cannot deserialize ApprovalStatus, both approve and SHA is required".into()),
+        }
+    }
+}
+
 /// Status of a GitHub build.
 #[derive(Debug, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "TEXT")]
@@ -140,15 +167,6 @@ pub struct BuildModel {
     pub status: BuildStatus,
     pub parent: String,
     pub created_at: DateTime<Utc>,
-}
-
-/// Represents the approval status of a pull request.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ApprovalStatus {
-    /// The user who approved the pull request.
-    pub approver: String,
-    /// The SHA of the commit that was approved.
-    pub sha: String,
 }
 
 /// Represents a pull request.
