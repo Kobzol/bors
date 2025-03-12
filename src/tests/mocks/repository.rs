@@ -27,6 +27,7 @@ use super::user::{GitHubUser, User};
 pub struct PullRequest {
     pub added_labels: Vec<String>,
     pub removed_labels: Vec<String>,
+    pub head_sha: String,
 }
 
 impl PullRequest {

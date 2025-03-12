@@ -38,7 +38,15 @@ pub async fn mock_pull_requests(
                 if pull_request_error {
                     ResponseTemplate::new(500)
                 } else {
-                    ResponseTemplate::new(200).set_body_json(GitHubPullRequest::new(pr_number))
+                    let mut pr = GitHubPullRequest::new(pr_number);
+
+                    if let Some(repo_pr) = repo_clone.lock().pull_requests.get(&pr_number) {
+                        if !repo_pr.head_sha.is_empty() {
+                            pr.head.sha = repo_pr.head_sha.clone();
+                        }
+                    }
+
+                    ResponseTemplate::new(200).set_body_json(pr)
                 }
             })
             .mount(mock_server)
