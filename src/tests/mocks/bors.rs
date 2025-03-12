@@ -299,9 +299,11 @@ impl BorsTester {
 
         let count = repo.get_next_pr_push_count();
 
-        if let Some(pr) = repo.pull_requests.get_mut(&pr_number) {
-            pr.head_sha = format!("pr-{}-sha-{}", pr_number, count);
-        }
+        let pr = repo
+            .pull_requests
+            .get_mut(&pr_number)
+            .expect("PR must be initialized before pushing to it");
+        pr.head_sha = format!("pr-{}-sha-{}", pr_number, count);
 
         drop(repo);
         self.send_webhook(
