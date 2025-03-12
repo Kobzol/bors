@@ -36,7 +36,7 @@ pub(super) async fn command_approve(
     };
     let approval_status = ApprovalStatus {
         approver: approver.clone(),
-        sha: pr.head.sha.to_string().as_str().to_string(),
+        sha: pr.head.sha.to_string(),
     };
     db.approve(
         repo_state.repository(),
