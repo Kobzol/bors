@@ -3,8 +3,8 @@ use chrono::Utc;
 use sqlx::postgres::PgExecutor;
 
 use crate::bors::RollupMode;
-use crate::database::BuildStatus;
 use crate::database::WorkflowModel;
+use crate::database::{ApprovalInfo, BuildStatus};
 use crate::github::CommitSha;
 use crate::github::GithubRepoName;
 use crate::github::PullRequestNumber;
@@ -28,11 +28,10 @@ pub(crate) async fn get_pull_request(
         pr.id,
         pr.repository as "repository: GithubRepoName",
         pr.number as "number!: i64",
-        CASE
-             WHEN pr.approved_by IS NOT NULL AND pr.approved_sha IS NOT NULL
-             THEN (pr.approved_by, pr.approved_sha)
-             ELSE NULL
-        END AS "approval_status: ApprovalStatus",
+        (
+         pr.approved_by,
+         pr.approved_sha
+        ) AS "approval_status!: ApprovalStatus",
         pr.priority,
         pr.rollup as "rollup: RollupMode",
         pr.delegated,
@@ -73,7 +72,7 @@ VALUES ($1, $2) ON CONFLICT DO NOTHING
 pub(crate) async fn approve_pull_request(
     executor: impl PgExecutor<'_>,
     pr_id: i32,
-    approval_status: ApprovalStatus,
+    approval_info: ApprovalInfo,
     priority: Option<u32>,
     rollup: Option<RollupMode>,
 ) -> anyhow::Result<()> {
@@ -88,8 +87,8 @@ SET approved_by = $1,
     rollup = COALESCE($4, rollup)
 WHERE id = $5
 "#,
-        approval_status.approver,
-        approval_status.sha,
+        approval_info.approver,
+        approval_info.sha,
         priority_i32,
         rollup.map(|r| r.to_string()),
         pr_id,
@@ -149,11 +148,10 @@ SELECT
     pr.id,
     pr.repository as "repository: GithubRepoName",
     pr.number as "number!: i64",
-    CASE
-        WHEN pr.approved_by IS NOT NULL AND pr.approved_sha IS NOT NULL
-        THEN (pr.approved_by, pr.approved_sha)
-        ELSE NULL
-    END AS "approval_status: ApprovalStatus",
+    (
+     pr.approved_by,
+     pr.approved_sha
+    ) AS "approval_status!: ApprovalStatus",
     pr.delegated,
     pr.priority,
     pr.rollup as "rollup: RollupMode",

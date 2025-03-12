@@ -1,6 +1,6 @@
 use crate::bors::Comment;
 use crate::bors::RepositoryState;
-use crate::database::PgDbClient;
+use crate::database::{ApprovalStatus, PgDbClient};
 use crate::github::PullRequest;
 use std::sync::Arc;
 
@@ -18,8 +18,8 @@ pub(super) async fn command_info(
     let mut info_lines = Vec::new();
 
     // Approval info
-    if let Some(approval_status) = pr_model.approval_status {
-        info_lines.push(format!("- **Approved by:** @{}", approval_status.approver));
+    if let ApprovalStatus::Approved(info) = pr_model.approval_status {
+        info_lines.push(format!("- **Approved by:** @{}", info.approver));
     } else {
         info_lines.push("- **Not Approved:**".to_string());
     }

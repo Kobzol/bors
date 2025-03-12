@@ -112,13 +112,28 @@ impl sqlx::Decode<'_, sqlx::Postgres> for RollupMode {
     }
 }
 
-/// Represents the approval status of a pull request.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ApprovalStatus {
+pub struct ApprovalInfo {
     /// The user who approved the pull request.
     pub approver: String,
     /// The SHA of the commit that was approved.
     pub sha: String,
+}
+
+/// Represents the approval status of a pull request.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ApprovalStatus {
+    NotApproved,
+    Approved(ApprovalInfo),
+}
+
+impl ApprovalStatus {
+    pub fn approver(&self) -> Option<&str> {
+        match self {
+            ApprovalStatus::Approved(info) => Some(info.approver.as_str()),
+            ApprovalStatus::NotApproved => None,
+        }
+    }
 }
 
 impl sqlx::Type<sqlx::Postgres> for ApprovalStatus {
@@ -133,8 +148,11 @@ impl<'r> sqlx::Decode<'r, sqlx::Postgres> for ApprovalStatus {
             <(Option<String>, Option<String>) as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
 
         match (approver, sha) {
-            (Some(approver), Some(sha)) => Ok(ApprovalStatus { approver, sha }),
-            _ => Err("Cannot deserialize ApprovalStatus, both approve and SHA is required".into()),
+            (Some(approver), Some(sha)) => {
+                Ok(ApprovalStatus::Approved(ApprovalInfo { approver, sha }))
+            }
+            (None, None) => Ok(ApprovalStatus::NotApproved),
+            _ => Err("Incosistent DB approval status".into()),
         }
     }
 }
@@ -175,7 +193,7 @@ pub struct PullRequestModel {
     pub id: PrimaryKey,
     pub repository: GithubRepoName,
     pub number: PullRequestNumber,
-    pub approval_status: Option<ApprovalStatus>,
+    pub approval_status: ApprovalStatus,
     pub delegated: bool,
     pub priority: Option<i32>,
     pub rollup: Option<RollupMode>,
@@ -185,7 +203,7 @@ pub struct PullRequestModel {
 
 impl PullRequestModel {
     pub fn is_approved(&self) -> bool {
-        self.approval_status.is_some()
+        matches!(self.approval_status, ApprovalStatus::Approved(_))
     }
 }
 

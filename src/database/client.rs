@@ -2,7 +2,8 @@ use sqlx::PgPool;
 
 use crate::bors::RollupMode;
 use crate::database::{
-    BuildModel, BuildStatus, PullRequestModel, WorkflowModel, WorkflowStatus, WorkflowType,
+    ApprovalInfo, BuildModel, BuildStatus, PullRequestModel, WorkflowModel, WorkflowStatus,
+    WorkflowType,
 };
 use crate::github::PullRequestNumber;
 use crate::github::{CommitSha, GithubRepoName};
@@ -14,7 +15,7 @@ use super::operations::{
     unapprove_pull_request, undelegate_pull_request, update_build_status, update_pr_build_id,
     update_workflow_status,
 };
-use super::{ApprovalStatus, RunId};
+use super::RunId;
 
 /// Provides access to a database using sqlx operations.
 #[derive(Clone)]
@@ -31,12 +32,12 @@ impl PgDbClient {
         &self,
         repo: &GithubRepoName,
         pr_number: PullRequestNumber,
-        approval_status: ApprovalStatus,
+        approval_info: ApprovalInfo,
         priority: Option<u32>,
         rollup: Option<RollupMode>,
     ) -> anyhow::Result<()> {
         let pr = self.get_or_create_pull_request(repo, pr_number).await?;
-        approve_pull_request(&self.pool, pr.id, approval_status, priority, rollup).await
+        approve_pull_request(&self.pool, pr.id, approval_info, priority, rollup).await
     }
 
     pub async fn unapprove(
