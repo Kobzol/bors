@@ -18,8 +18,8 @@ pub(super) async fn command_info(
     let mut info_lines = Vec::new();
 
     // Approval info
-    if let Some(approved_by) = pr_model.approved_by {
-        info_lines.push(format!("- **Approved by:** @{}", approved_by));
+    if let Some(approval_status) = pr_model.approval_status {
+        info_lines.push(format!("- **Approved by:** @{}", approval_status.approver));
     } else {
         info_lines.push("- **Not Approved:**".to_string());
     }

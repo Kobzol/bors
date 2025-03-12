@@ -142,14 +142,22 @@ pub struct BuildModel {
     pub created_at: DateTime<Utc>,
 }
 
+/// Represents the approval status of a pull request.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ApprovalStatus {
+    /// The user who approved the pull request.
+    pub approver: String,
+    /// The SHA of the commit that was approved.
+    pub sha: String,
+}
+
 /// Represents a pull request.
 #[derive(Debug)]
 pub struct PullRequestModel {
     pub id: PrimaryKey,
     pub repository: GithubRepoName,
     pub number: PullRequestNumber,
-    pub approved_by: Option<String>,
-    pub approved_sha: Option<String>,
+    pub approval_status: Option<ApprovalStatus>,
     pub delegated: bool,
     pub priority: Option<i32>,
     pub rollup: Option<RollupMode>,
@@ -159,7 +167,7 @@ pub struct PullRequestModel {
 
 impl PullRequestModel {
     pub fn is_approved(&self) -> bool {
-        self.approved_by.is_some()
+        self.approval_status.is_some()
     }
 }
 

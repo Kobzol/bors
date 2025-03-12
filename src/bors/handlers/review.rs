@@ -7,6 +7,7 @@ use crate::bors::handlers::has_permission;
 use crate::bors::handlers::labels::handle_label_trigger;
 use crate::bors::Comment;
 use crate::bors::RepositoryState;
+use crate::database::ApprovalStatus;
 use crate::github::GithubUser;
 use crate::github::LabelTrigger;
 use crate::github::PullRequest;
@@ -33,11 +34,14 @@ pub(super) async fn command_approve(
         Approver::Myself => author.username.clone(),
         Approver::Specified(approver) => approver.clone(),
     };
+    let approval_status = ApprovalStatus {
+        approver: approver.clone(),
+        sha: pr.head.sha.to_string().as_str().to_string(),
+    };
     db.approve(
         repo_state.repository(),
         pr.number,
-        approver.as_str(),
-        pr.head.sha.to_string().as_str(),
+        approval_status,
         priority,
         rollup,
     )
@@ -326,7 +330,10 @@ mod tests {
             tester.expect_comments(1).await;
             let pr = tester.get_default_pr().await?;
             assert_eq!(pr.priority, Some(10));
-            assert_eq!(pr.approved_by, Some("user1".to_string()));
+            assert_eq!(
+                pr.approval_status.map(|s| s.approver),
+                Some("user1".to_string())
+            );
             Ok(tester)
         })
         .await;
@@ -733,7 +740,10 @@ approve = ["+approved"]
             tester.expect_comments(1).await;
             let pr = tester.get_default_pr().await?;
             assert_eq!(pr.rollup, Some(RollupMode::Always));
-            assert_eq!(pr.approved_by, Some("user1".to_string()));
+            assert_eq!(
+                pr.approval_status.map(|s| s.approver),
+                Some("user1".to_string())
+            );
             Ok(tester)
         })
         .await;
@@ -746,7 +756,10 @@ approve = ["+approved"]
             tester.expect_comments(1).await;
             let pr = tester.get_default_pr().await?;
             assert_eq!(pr.rollup, Some(RollupMode::Always));
-            assert_eq!(pr.approved_by, Some("user1".to_string()));
+            assert_eq!(
+                pr.approval_status.map(|s| s.approver),
+                Some("user1".to_string())
+            );
             Ok(tester)
         })
         .await;
@@ -762,7 +775,10 @@ approve = ["+approved"]
             let pr = tester.get_default_pr().await?;
             assert_eq!(pr.rollup, Some(RollupMode::Always));
             assert_eq!(pr.priority, Some(10));
-            assert_eq!(pr.approved_by, Some("user1".to_string()));
+            assert_eq!(
+                pr.approval_status.map(|s| s.approver),
+                Some("user1".to_string())
+            );
             Ok(tester)
         })
         .await;
@@ -778,7 +794,10 @@ approve = ["+approved"]
             let pr = tester.get_default_pr().await?;
             assert_eq!(pr.rollup, Some(RollupMode::Maybe));
             assert_eq!(pr.priority, Some(10));
-            assert_eq!(pr.approved_by, Some("user1".to_string()));
+            assert_eq!(
+                pr.approval_status.map(|s| s.approver),
+                Some("user1".to_string())
+            );
             Ok(tester)
         })
         .await;
@@ -868,7 +887,7 @@ approve = ["+approved"]
 
             let pr = tester.get_default_pr().await?;
             assert_eq!(
-                pr.approved_sha,
+                pr.approval_status.map(|s| s.sha),
                 Some(format!("pr-{}-sha", default_pr_number()))
             );
 
@@ -885,7 +904,7 @@ approve = ["+approved"]
 
             let pr = tester.get_default_pr().await?;
             assert_eq!(
-                pr.approved_sha,
+                pr.approval_status.map(|s| s.sha),
                 Some(format!("pr-{}-sha", default_pr_number()))
             );
 
@@ -897,7 +916,7 @@ approve = ["+approved"]
 
             let pr = tester.get_default_pr().await?;
             assert_eq!(
-                pr.approved_sha,
+                pr.approval_status.map(|s| s.sha),
                 Some(format!("pr-{}-sha", default_pr_number()))
             );
 
