@@ -917,7 +917,7 @@ approve = ["+approved"]
             let pr = tester.get_default_pr().await?;
             assert_eq!(
                 pr.approval_status.map(|s| s.sha),
-                Some(format!("pr-{}-sha-2", default_pr_number()))
+                Some(format!("pr-{}-sha-1", default_pr_number()))
             );
 
             Ok(tester)

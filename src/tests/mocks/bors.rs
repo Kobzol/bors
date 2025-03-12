@@ -6,8 +6,6 @@ use serde::Serialize;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
@@ -33,9 +31,6 @@ use crate::{
 };
 
 use super::pull_request::{GitHubPullRequestEventPayload, PullRequestChangeEvent};
-
-/// Counter used to generate incrementing SHA values for PR pushes.
-static PR_PUSH_SHA_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct BorsBuilder {
     world: World,
@@ -301,7 +296,8 @@ impl BorsTester {
     pub async fn push_to_pull_request(&mut self, pr_number: u64) -> anyhow::Result<()> {
         let repo = self.default_repo();
         let mut repo = repo.lock();
-        let count = PR_PUSH_SHA_COUNTER.fetch_add(1, SeqCst);
+
+        let count = repo.get_next_pr_push_count();
 
         if let Some(pr) = repo.pull_requests.get_mut(&pr_number) {
             pr.head_sha = format!("pr-{}-sha-{}", pr_number, count);

@@ -61,6 +61,7 @@ pub struct Repo {
     pub pull_requests: HashMap<u64, PullRequest>,
     // Cause pull request fetch to fail.
     pub pull_request_error: bool,
+    pub pr_push_counter: u64,
 }
 
 impl Repo {
@@ -72,11 +73,12 @@ impl Repo {
             name: GithubRepoName::new(owner, name),
             permissions,
             config,
+            pull_requests,
             branches: vec![Branch::default()],
             cancelled_workflows: vec![],
             workflow_cancel_error: false,
-            pull_requests,
             pull_request_error: false,
+            pr_push_counter: 0,
         }
     }
 
@@ -103,6 +105,11 @@ impl Repo {
 
     pub fn add_cancelled_workflow(&mut self, run_id: u64) {
         self.cancelled_workflows.push(run_id);
+    }
+
+    pub fn get_next_pr_push_count(&mut self) -> u64 {
+        self.pr_push_counter += 1;
+        self.pr_push_counter
     }
 }
 
