@@ -22,13 +22,9 @@ use super::TreeState;
 use super::WorkflowStatus;
 use super::WorkflowType;
 
-pub(crate) async fn get_pull_request(
-    executor: impl PgExecutor<'_>,
-    repo: &GithubRepoName,
-    pr_number: PullRequestNumber,
-) -> anyhow::Result<Option<PullRequestModel>> {
-    measure_db_query("get_pull_request", || async {
-        let record = sqlx::query_as!(
+macro_rules! pr_query {
+    ($repo:expr, $pr_number:expr, $params:literal) => {
+        sqlx::query_as!(
             PullRequestModel,
             r#"
     SELECT
@@ -39,7 +35,7 @@ pub(crate) async fn get_pull_request(
             pr.approved_by,
             pr.approved_sha
         ) AS "approval_status!: ApprovalStatus",
-        pr.status as "pr_status: PullRequestStatus", 
+        pr.status as "pr_status: PullRequestStatus",
         pr.priority,
         pr.rollup as "rollup: RollupMode",
         pr.delegated,
@@ -49,11 +45,23 @@ pub(crate) async fn get_pull_request(
         build AS "try_build: BuildModel"
     FROM pull_request as pr
     LEFT JOIN build ON pr.build_id = build.id
-    WHERE pr.repository = $1 AND
-          pr.number = $2
-    "#,
-            repo as &GithubRepoName,
-            pr_number.0 as i32
+    "# + $params,
+            $repo as &GithubRepoName,
+            $pr_number.0 as i32
+        )
+    };
+}
+
+pub(crate) async fn get_pull_request(
+    executor: impl PgExecutor<'_>,
+    repo: &GithubRepoName,
+    pr_number: PullRequestNumber,
+) -> anyhow::Result<Option<PullRequestModel>> {
+    measure_db_query("get_pull_request", || async {
+        let record = pr_query!(
+            repo,
+            pr_number,
+            "WHERE pr.repository = $1 AND pr.number = $2"
         )
         .fetch_optional(executor)
         .await?;
