@@ -4,6 +4,7 @@ use std::{collections::HashMap, time::SystemTime};
 use super::user::{GitHubUser, User};
 use crate::bors::PullRequestStatus;
 use crate::database::WorkflowStatus;
+use crate::github::api::client::MinimizeCommentReason;
 use crate::github::{GithubRepoName, PullRequestNumber};
 use crate::permissions::PermissionType;
 use crate::tests::mocks::comment::Comment;
@@ -13,6 +14,7 @@ use crate::tests::mocks::workflow::WorkflowJob;
 use crate::tests::mocks::{GitHubState, WorkflowRunData, default_pr_number, dynamic_mock_req};
 use base64::Engine;
 use chrono::{DateTime, Utc};
+use graphql_parser::query::{Definition, Document, OperationDefinition, Selection};
 use octocrab::models::pulls::MergeableState;
 use octocrab::models::repos::Object;
 use octocrab::models::repos::Object::Commit;
@@ -394,7 +396,52 @@ pub async fn mock_repo(
     mock_check_runs(repo.clone(), mock_server).await;
     mock_workflow_runs(repo.clone(), mock_server).await;
     mock_workflow_jobs(repo.clone(), mock_server).await;
-    mock_config(repo, mock_server).await;
+    mock_config(repo.clone(), mock_server).await;
+    mock_graphql(repo.clone(), mock_server).await;
+}
+
+async fn mock_graphql(repo: Arc<Mutex<Repo>>, mock_server: &MockServer) {
+    dynamic_mock_req(
+        move |request: &Request, []: [&str; 0]| {
+            #[derive(serde::Deserialize)]
+            struct GraphQlRequest {
+                query: String,
+                variables: serde_json::Value,
+            }
+
+            // Do some basic parsing of GraphQL. We only support the small subset of operations
+            // used by bors.
+            let body: GraphQlRequest = request.body_json().unwrap();
+            let query: Document<&str> =
+                graphql_parser::parse_query(&body.query).expect("Could not parse GraphQL query");
+            let definition = query.definitions.into_iter().next().unwrap();
+            let mutation = match definition {
+                Definition::Operation(OperationDefinition::Mutation(mutation)) => mutation,
+                _ => panic!("Unexpected GraphQL query: {}", body.query),
+            };
+            let selection = mutation.selection_set.items.into_iter().next().unwrap();
+            let operation = match selection {
+                Selection::Field(field) => field,
+                _ => panic!("Unexpected GraphQL selection"),
+            };
+            if operation.name == "minimizeComment" {
+                #[derive(serde::Deserialize)]
+                struct Variables {
+                    node_id: String,
+                    reason: MinimizeCommentReason,
+                }
+                let data: Variables = serde_json::from_value(body.variables).unwrap();
+            } else {
+                panic!("Unexpected operation {}", operation.name);
+            }
+
+            ResponseTemplate::new(200)
+        },
+        "POST",
+        format!("^/graphql$"),
+    )
+    .mount(mock_server)
+    .await;
 }
 
 async fn mock_branches(repo: Arc<Mutex<Repo>>, mock_server: &MockServer) {

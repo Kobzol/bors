@@ -442,7 +442,7 @@ impl GithubRepositoryClient {
 /// The reasons a piece of content can be reported or minimized.
 ///
 /// GitHub Docs: <https://docs.github.com/en/graphql/reference/enums#reportedcontentclassifiers>
-#[derive(Debug, Copy, Clone, Serialize)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum MinimizeCommentReason {
     /// An abusive or harassing piece of content.
