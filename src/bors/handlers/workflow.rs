@@ -509,11 +509,14 @@ mod tests {
     use crate::database::WorkflowStatus;
     use crate::database::operations::get_all_workflows;
     use crate::tests::{BorsBuilder, BorsTester, GitHub};
-    use crate::tests::{Branch, WorkflowEvent, WorkflowRunData, run_test};
+    use crate::tests::{Branch, WorkflowEvent, run_test};
 
     #[sqlx::test]
     async fn workflow_started_unknown_build(pool: sqlx::PgPool) {
         run_test(pool.clone(), async |tester: &mut BorsTester| {
+            tester.modify_repo((), |repo| {
+                repo.add_branch(Branch::new("unknown", "unknown-sha"))
+            });
             tester
                 .workflow_event(WorkflowEvent::started(Branch::new(
                     "unknown",
@@ -586,8 +589,8 @@ mod tests {
             let w2 = WorkflowRunData::from(tester.try_branch()).with_run_id(2);
 
             // Let the GH mock know about the existence of the second workflow
-            tester.with_repo((), |repo| {
-                repo.update_workflow_run(w2.clone(), WorkflowStatus::Pending)
+            tester.modify_repo((), |repo| {
+                repo.update_workflow(w2.clone(), WorkflowStatus::Pending)
             });
 
             // Finish w1 while w2 is not yet in the DB

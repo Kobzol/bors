@@ -84,7 +84,7 @@ async fn mock_cancel_workflow(repo: Arc<Mutex<Repo>>, mock_server: &MockServer) 
             if repo.workflow_cancel_error {
                 ResponseTemplate::new(500)
             } else {
-                repo.add_cancelled_workflow(run_id);
+                repo.add_cancelled_workflow(RunId(run_id));
                 ResponseTemplate::new(200)
             }
         },
@@ -303,12 +303,8 @@ async fn mock_workflow_runs(repo: Arc<Mutex<Repo>>, mock_server: &MockServer) {
                 .parse::<u64>()
                 .unwrap()
                 .into();
-            let workflow_runs: Vec<WorkflowRun> = repo
-                .workflow_runs
-                .iter()
-                .filter(|w| w.workflow_run.check_suite_id == check_suite_id)
-                .cloned()
-                .collect();
+            let workflow_runs: Vec<WorkflowRun> =
+                repo.find_workflows_by_check_suite_id(check_suite_id);
 
             let response = WorkflowRunsResponse {
                 workflow_runs: workflow_runs
@@ -353,9 +349,7 @@ async fn mock_workflow_jobs(repo: Arc<Mutex<Repo>>, mock_server: &MockServer) {
             let repo = repo.lock();
             let run_id: RunId = run_id.parse::<u64>().expect("Non-integer run id").into();
             let workflow_run = repo
-                .workflow_runs
-                .iter()
-                .find(|w| w.workflow_run.run_id == run_id)
+                .find_workflow(run_id)
                 .unwrap_or_else(|| panic!("Workflow run with ID {run_id} not found"));
 
             let response = GitHubWorkflowJobs {

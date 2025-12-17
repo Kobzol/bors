@@ -723,7 +723,7 @@ merge_queue_enabled = false
             tester.approve(()).await?;
             tester.start_auto_build(()).await?;
             tester
-               .with_repo((), |repo| {
+               .modify_repo((), |repo| {
                    repo.push_behaviour = BranchPushBehaviour::always_fail(BranchPushError::Conflict)
                })
                ;
@@ -744,7 +744,7 @@ merge_queue_enabled = false
             tester.approve(()).await?;
             tester.start_auto_build(()).await?;
             tester
-                .with_repo((), |repo| {
+                .modify_repo((), |repo| {
                     repo.push_behaviour = BranchPushBehaviour::always_fail(BranchPushError::ValidationFailed)
                 })
                ;
@@ -764,7 +764,7 @@ merge_queue_enabled = false
         run_test(pool, async |tester: &mut BorsTester| {
             tester.approve(()).await?;
             tester.start_auto_build(()).await?;
-            tester.with_repo((), |repo| {
+            tester.modify_repo((), |repo| {
                 repo.push_behaviour =
                     BranchPushBehaviour::always_fail(BranchPushError::InternalServerError)
             });
@@ -784,7 +784,7 @@ merge_queue_enabled = false
         run_test(pool, async |tester: &mut BorsTester| {
             tester.approve(()).await?;
             tester.start_auto_build(()).await?;
-            tester.with_repo((), |repo| {
+            tester.modify_repo((), |repo| {
                 repo.push_behaviour = BranchPushBehaviour::always_fail(BranchPushError::Conflict)
             });
             tester.workflow_full_success(tester.auto_branch()).await?;
@@ -805,7 +805,7 @@ merge_queue_enabled = false
         run_test(pool, async |tester: &mut BorsTester| {
             tester.approve(()).await?;
             tester.start_auto_build(()).await?;
-            tester.with_repo((), |repo| {
+            tester.modify_repo((), |repo| {
                 repo.push_behaviour =
                     BranchPushBehaviour::fail_n_times(BranchPushError::InternalServerError, 1)
             });
