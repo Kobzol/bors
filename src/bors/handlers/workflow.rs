@@ -548,7 +548,7 @@ mod tests {
             tester.post_comment("@bors try").await?;
             tester.expect_comments((), 1).await;
             tester
-                .workflow_event(WorkflowEvent::started(tester.try_branch().await))
+                .workflow_event(WorkflowEvent::started(tester.try_branch()))
                 .await?;
             Ok(())
         })
@@ -563,7 +563,7 @@ mod tests {
             tester.post_comment("@bors try").await?;
             tester.expect_comments((), 1).await;
 
-            let workflow = WorkflowRunData::from(tester.try_branch().await);
+            let workflow = WorkflowRunData::from(tester.try_branch());
             tester
                 .workflow_event(WorkflowEvent::started(workflow.clone()))
                 .await?;
@@ -583,15 +583,13 @@ mod tests {
             tester.post_comment("@bors try").await?;
             tester.expect_comments((), 1).await;
 
-            let w1 = WorkflowRunData::from(tester.try_branch().await).with_run_id(1);
-            let w2 = WorkflowRunData::from(tester.try_branch().await).with_run_id(2);
+            let w1 = WorkflowRunData::from(tester.try_branch()).with_run_id(1);
+            let w2 = WorkflowRunData::from(tester.try_branch()).with_run_id(2);
 
             // Let the GH mock know about the existence of the second workflow
-            tester
-                .modify_repo(&default_repo_name(), |repo| {
-                    repo.update_workflow_run(w2.clone(), WorkflowStatus::Pending)
-                })
-                .await;
+            tester.modify_repo(&default_repo_name(), |repo| {
+                repo.update_workflow_run(w2.clone(), WorkflowStatus::Pending)
+            });
 
             // Finish w1 while w2 is not yet in the DB
             tester.workflow_full_success(w1).await?;
@@ -620,8 +618,8 @@ mod tests {
             tester.post_comment("@bors try").await?;
             tester.expect_comments((), 1).await;
 
-            let w1 = WorkflowRunData::from(tester.try_branch().await).with_run_id(1);
-            let w2 = WorkflowRunData::from(tester.try_branch().await).with_run_id(2);
+            let w1 = WorkflowRunData::from(tester.try_branch()).with_run_id(1);
+            let w2 = WorkflowRunData::from(tester.try_branch()).with_run_id(2);
             tester.workflow_start(w1.clone()).await?;
             tester.workflow_start(w2.clone()).await?;
 
@@ -650,8 +648,8 @@ mod tests {
             tester.post_comment("@bors try").await?;
             tester.expect_comments((), 1).await;
 
-            let w1 = WorkflowRunData::from(tester.try_branch().await).with_run_id(1);
-            let w2 = WorkflowRunData::from(tester.try_branch().await).with_run_id(2);
+            let w1 = WorkflowRunData::from(tester.try_branch()).with_run_id(1);
+            let w2 = WorkflowRunData::from(tester.try_branch()).with_run_id(2);
             tester.workflow_start(w1.clone()).await?;
             tester.workflow_start(w2.clone()).await?;
 
@@ -680,7 +678,7 @@ min_ci_time = 10
                 // Too short workflow, it should be marked as a failure
                 tester
                     .workflow_full_success(
-                        WorkflowRunData::from(tester.try_branch().await)
+                        WorkflowRunData::from(tester.try_branch())
                             .with_duration(Duration::from_secs(1)),
                     )
                     .await?;
@@ -707,7 +705,7 @@ min_ci_time = 20
 
                 tester
                     .workflow_full_success(
-                        WorkflowRunData::from(tester.try_branch().await)
+                        WorkflowRunData::from(tester.try_branch())
                             .with_duration(Duration::from_secs(100)),
                     )
                     .await?;
