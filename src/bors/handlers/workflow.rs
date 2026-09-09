@@ -8,7 +8,7 @@ use crate::bors::event::{
 use crate::bors::handlers::{get_build_kind_from_branch, is_bors_observed_branch};
 use crate::bors::{BuildKind, build};
 use crate::database::{BuildModel, BuildStatus, PullRequestModel, WorkflowStatus};
-use crate::ec2::{Ec2InstanceStartData, ParsedLabel, start_ec2_github_runner};
+use crate::ec2::{Ec2InstanceStartData, InstanceSpawnKind, ParsedLabel, start_ec2_github_runner};
 use crate::github::CommitSha;
 use crate::github::api::client::GithubRepositoryClient;
 use crate::{BorsContext, PgDbClient};
@@ -238,6 +238,7 @@ async fn try_start_ec2_instance(
         commit_sha: payload.commit_sha.clone(),
         pr_number,
         build_kind,
+        spawn_kind: InstanceSpawnKind::Normal,
     };
     start_ec2_github_runner(ec2_ctx, ec2_config, repo, label, data).await
 }

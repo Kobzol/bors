@@ -70,7 +70,7 @@ impl<'a> ParsedLabel<'a> {
 }
 
 /// How long should we cache spawned instances in memory.
-const INSTANCE_CACHE_LIMIT: chrono::Duration = chrono::Duration::hours(1);
+const INSTANCE_CACHE_LIMIT: chrono::Duration = chrono::Duration::minutes(30);
 /// Maximum number of spawned instances to remember.
 const INSTANCE_CACHE_SIZE: usize = 300;
 
@@ -130,6 +130,13 @@ impl Ec2Context {
     }
 }
 
+pub enum InstanceSpawnKind {
+    /// We are spawning an instance in reaction to a webhook about a job being started.
+    Normal,
+    /// We are spawning an instance for a job that didn't receive any runner in some time.
+    Backfill,
+}
+
 pub struct Ec2InstanceStartData {
     pub job_id: JobId,
     pub job_name: String,
@@ -137,6 +144,7 @@ pub struct Ec2InstanceStartData {
     pub commit_sha: CommitSha,
     pub pr_number: Option<PullRequestNumber>,
     pub build_kind: BuildKind,
+    pub spawn_kind: InstanceSpawnKind,
 }
 
 /// Starts an EC2 instance on AWS, which should run a self-hosted GitHub Actions runner
@@ -175,7 +183,20 @@ pub async fn start_ec2_github_runner(
     // Commit SHA is 40 characters
     // GitHub job ID is e.g. `102375935997`, so around ~12 characters
     // Thus below we should have ~53 characters, with some to spare
+    // If we are backfilling, allow "breaking" through the idempotency token by adding a separate
+    // marker. This allows us to spawn an additional instance even if there was one spawned
+    // previously, with the hope that it will now work.
+    // Note that due to the idempotency token memory cache below, we won't be able to spawn even a
+    // backfilled instance more than once per `INSTANCE_CACHE_LIMIT`.
     let mut idempotency_token = format!("{}-{}", data.job_id, data.commit_sha);
+    match data.spawn_kind {
+        InstanceSpawnKind::Normal => {}
+        InstanceSpawnKind::Backfill => {
+            // Use a short marker to avoid filling up the 64 characters. Commit SHAs should never
+            // contain a dash, so this shouldn't conflict with it.
+            idempotency_token.push_str("-b");
+        }
+    }
     idempotency_token.truncate(64);
 
     // Ideally, we would just be using EC2's idempotency mechanism directly.
@@ -467,6 +488,7 @@ pub async fn backfill_ec2_instances(
             commit_sha: CommitSha(build.commit_sha.clone()),
             pr_number,
             build_kind: build.kind,
+            spawn_kind: InstanceSpawnKind::Backfill,
         };
         let res = start_ec2_github_runner(ec2_ctx, ec2_config, &repo, label, data).await;
         if let Err(error) = res {
